@@ -1,10 +1,12 @@
 import os
 from pathlib import Path
 from celery.schedules import crontab
+from dotenv import load_dotenv
 
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
@@ -58,11 +60,11 @@ WSGI_APPLICATION = 'service_desk.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT')
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT')
     }
 }
 
@@ -110,9 +112,9 @@ STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-IMAP_SERVER = os.environ.get('IMAP_SERVER')
-EMAIL_ACCOUNT = os.environ.get('EMAIL_ACCOUNT')
-EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+IMAP_SERVER = os.getenv('IMAP_SERVER')
+EMAIL_ACCOUNT = os.getenv('EMAIL_ACCOUNT')
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
 CELERY_BROKER_URL = 'redis://localhost:6380'
 CELERY_RESULT_BACKEND = 'redis://localhost:6380'
@@ -122,8 +124,8 @@ CELERY_TIMEZONE = 'Europe/Moscow'
 # to run worker - celery -A DashboardAPI worker -l info
 
 CELERY_BEAT_SCHEDULE = { # scheduler configuration
-    'fethc-emails_every-2-minutes' : {
-        'task': 'api.tasks.get_token_values',
-        'schedule': crontab(minute='*/2'),
+    'fetch-emails_every-minute' : {
+        'task': 'tickets.tasks.fetch_email',
+        'schedule': crontab(minute='*/1'),
     },
 }
