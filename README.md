@@ -10,7 +10,12 @@
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
-### 📁 Environment Variables
+### Project Stack
+- **Backend**: DRF, Celery
+- **Database**: PostgreSQL
+- **API Doc**: Swagger, Redoc
+- **Conteinerization**: Docker, docker compose
+### Environment Variables
 
  Создайте .env файл в корне проекта. Ниже приведены переменные, которые необходимо установить:
 
