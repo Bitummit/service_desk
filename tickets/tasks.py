@@ -6,7 +6,6 @@ from email.header import decode_header
 from email.utils import parseaddr
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
 from service_desk import celery_app
 from .models import Issue, Message, StatusChoice
 from service_desk.settings import (
@@ -20,6 +19,7 @@ from service_desk.settings import (
 
 AUTO_REPLY_TEXT = "Спасибо за обращение, скоро с Вами свяжется менеджер"
 ALREADY_CLOSED_TEXT = "Данное обращение уже закрыто!"
+
 
 @celery_app.task
 def fetch_email():
@@ -42,7 +42,7 @@ def fetch_email():
 
 
 @celery_app.task
-def send_mail(issue_id, body):
+def send_mail(issue_id: int, body: str):
 
     issue = Issue.objects.get(pk=issue_id)
     msg = MIMEMultipart()
@@ -66,7 +66,7 @@ def send_mail(issue_id, body):
         print(f"Ошибка при отправке ответа: {e}")
 
 
-def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]) -> None:
+def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]):
     # само содержание письма
     msg = email.message_from_bytes(msg_data[0][1])
 
@@ -117,6 +117,7 @@ def get_subject(msg) -> str:
     except Exception as e:
         print(f"Невозможно прочитать тему письма: {e}")
     return subject
+
 
 def get_body(msg) -> str:
     body = ""

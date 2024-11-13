@@ -1,15 +1,11 @@
-from logging import raiseExceptions
-
 from django.db.models import Q
 from rest_framework import generics
-
 from tickets.models import Issue, Message, StatusChoice
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from .serilizers import IssueSerializer, IssueUpdateSerializer, SendMessageSerializer
 from drf_yasg.utils import swagger_auto_schema
-from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.response import Response
 from rest_framework import status
 

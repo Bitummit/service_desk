@@ -6,6 +6,7 @@ from tickets.tasks import send_mail
 
 CLOSE_ISSUE_TEXT = "Заявка закрыта."
 
+
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
@@ -33,6 +34,7 @@ class IssueUpdateSerializer(serializers.ModelSerializer):
 
 
 class SendMessageSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Message
         fields = ['body']
