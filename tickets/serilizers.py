@@ -33,7 +33,6 @@ class IssueUpdateSerializer(serializers.ModelSerializer):
 
 
 class SendMessageSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Message
         fields = ['body']
@@ -41,7 +40,9 @@ class SendMessageSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         issue = self.context.get('issue')
         if issue:
+            if issue.status == StatusChoice.CLOSED:
+                raise Exception("Issue already closed!")
             validated_data["issue_id"] = issue.pk
             validated_data["subject"] = issue.title
-        send_mail.delay(issue.pk, validated_data.get('body'))
+            send_mail.delay(issue.pk, validated_data.get('body'))
         return super().create(validated_data)

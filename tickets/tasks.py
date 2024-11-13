@@ -9,7 +9,6 @@ from email.mime.multipart import MIMEMultipart
 
 from service_desk import celery_app
 from .models import Issue, Message, StatusChoice
-from django.core.exceptions import ObjectDoesNotExist
 from service_desk.settings import (
     IMAP_SERVER,
     EMAIL_ACCOUNT,
@@ -83,7 +82,7 @@ def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]) -> None:
         try:
             # проверка, что данное обращение сущетсвует в БД
             issue = Issue.objects.get(pk=issue_id)
-        except ObjectDoesNotExist:
+        except Exception:
             print(f"Несуществующий id обращения: {issue_id}")
         if issue.status == StatusChoice.CLOSED:
             send_mail.delay(issue.pk, ALREADY_CLOSED_TEXT)
