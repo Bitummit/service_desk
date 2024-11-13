@@ -1,12 +1,10 @@
-from lib2to3.fixes.fix_input import context
-
+from django.db.models import Q
 from rest_framework import generics
 
-from tickets.models import Issue, Message
+from tickets.models import Issue, Message, StatusChoice
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
-from rest_framework import views
 from .serilizers import IssueSerializer, IssueUpdateSerializer, SendMessageSerializer
 
 
@@ -20,7 +18,7 @@ class IssueListView(generics.ListAPIView):
 
 
 class IssueUpdateView(generics.UpdateAPIView):
-    queryset = Issue.objects.all()
+    queryset = Issue.objects.filter(~Q(status=StatusChoice.CLOSED))
     serializer_class = IssueUpdateSerializer
     permission_classes = [IsAuthenticated]
 

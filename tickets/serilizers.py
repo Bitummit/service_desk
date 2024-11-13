@@ -1,8 +1,10 @@
 from rest_framework import serializers
 
-from tickets.models import Issue, Message
+from tickets.models import Issue, Message, StatusChoice
 from tickets.tasks import send_mail
 
+
+CLOSE_ISSUE_TEXT = "Заявка закрыта."
 
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,6 +25,11 @@ class IssueUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Issue
         fields = ['status', 'manager']
+
+    def update(self, instance, validated_data):
+        if validated_data['status'] == StatusChoice.CLOSED:
+            send_mail.delay(instance.pk, CLOSE_ISSUE_TEXT)
+        return super().update(instance, validated_data)
 
 
 class SendMessageSerializer(serializers.ModelSerializer):

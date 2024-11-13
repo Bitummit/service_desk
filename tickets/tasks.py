@@ -6,9 +6,9 @@ from email.header import decode_header
 from email.utils import parseaddr
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from celery import shared_task
+
 from service_desk import celery_app
-from .models import Issue, Message
+from .models import Issue, Message, StatusChoice
 from django.core.exceptions import ObjectDoesNotExist
 from service_desk.settings import (
     IMAP_SERVER,
@@ -20,7 +20,7 @@ from service_desk.settings import (
 
 
 AUTO_REPLY_TEXT = "Спасибо за обращение, скоро с Вами свяжется менеджер"
-
+ALREADY_CLOSED_TEXT = "Данное обращение уже закрыто!"
 
 @celery_app.task
 def fetch_email():
@@ -44,6 +44,7 @@ def fetch_email():
 
 @celery_app.task
 def send_mail(issue_id, body):
+
     issue = Issue.objects.get(pk=issue_id)
     msg = MIMEMultipart()
     msg['From'] = EMAIL_ACCOUNT
@@ -61,9 +62,9 @@ def send_mail(issue_id, body):
                 body=body,
                 issue_id=issue.pk,
             )
-            print(f"Автоответ отправлен {issue.client}")
+            print(f"Ответ отправлен {issue.client}")
     except Exception as e:
-        print(f"Ошибка при отправке автоответа: {e}")
+        print(f"Ошибка при отправке ответа: {e}")
 
 
 def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]) -> None:
@@ -84,6 +85,8 @@ def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]) -> None:
             issue = Issue.objects.get(pk=issue_id)
         except ObjectDoesNotExist:
             print(f"Несуществующий id обращения: {issue_id}")
+        if issue.status == StatusChoice.CLOSED:
+            send_mail.delay(issue.pk, ALREADY_CLOSED_TEXT)
     else:
         # создание нового обращения, если в теме письма нету id
         issue = Issue.objects.create(
