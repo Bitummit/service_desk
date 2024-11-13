@@ -43,18 +43,23 @@ def fetch_email():
 
 
 @celery_app.task
-def send_mail(to, subject, body):
+def send_mail(issue, body):
     msg = MIMEMultipart()
     msg['From'] = EMAIL_ACCOUNT
-    msg['To'] = to
-    msg['Subject'] = subject
+    msg['To'] = issue.client
+    msg['Subject'] = issue.title
     msg.attach(MIMEText(body, 'plain'))
 
     try:
         with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
             server.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ACCOUNT, to, msg.as_string())
-            print(f"Автоответ отправлен {to}")
+            server.sendmail(EMAIL_ACCOUNT, issue.client, msg.as_string())
+            Message.objects.create(
+                answer=True,
+                subject=issue.title,
+                body=body
+            )
+            print(f"Автоответ отправлен {issue.client}")
     except Exception as e:
         print(f"Ошибка при отправке автоответа: {e}")
 
@@ -86,7 +91,7 @@ def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]) -> None:
         issue.title = issue.title + f"[Issue #{issue.pk}]"
         issue.save()
 
-        send_mail.delay(issue.client, issue.title, AUTO_REPLY_TEXT)
+        send_mail.delay(issue, AUTO_REPLY_TEXT)
     try:
         # получение содержания письма
         body = get_body(msg)

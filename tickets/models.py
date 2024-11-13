@@ -22,6 +22,7 @@ class Issue(models.Model):
 class Message(models.Model):
     subject = models.CharField(max_length=256, verbose_name="Тема")
     body = models.TextField(verbose_name="Содержание")
+    answer = models.BooleanField(default=False, verbose_name="Наш ответ")
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name="messages",verbose_name="Обращение")
 
     def __str__(self):

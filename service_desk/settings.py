@@ -20,7 +20,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'tickets'
+    'rest_framework',
+    'django_filters',
+    'tickets',
 ]
 
 MIDDLEWARE = [
@@ -132,4 +134,10 @@ CELERY_BEAT_SCHEDULE = { # scheduler configuration
         'task': 'tickets.tasks.fetch_email',
         'schedule': crontab(minute='*/1'),
     },
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 25
 }
