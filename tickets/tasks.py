@@ -1,22 +1,28 @@
 import imaplib
+import smtplib
 import email
-from base64 import decode
-from curses.ascii import isupper
-from email.header import decode_header
-from json.encoder import ESCAPE
-
-from celery import shared_task
-from .models import Issue, Message
 import re
-import datetime
+from email.header import decode_header
+from email.utils import parseaddr
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from celery import shared_task
+from service_desk import celery_app
+from .models import Issue, Message
 from django.core.exceptions import ObjectDoesNotExist
 from service_desk.settings import (
     IMAP_SERVER,
     EMAIL_ACCOUNT,
-    EMAIL_PASSWORD
+    EMAIL_PASSWORD,
+    SMTP_SERVER,
+    SMTP_PORT
 )
 
-@shared_task
+
+AUTO_REPLY_TEXT = "Спасибо за обращение, скоро с Вами свяжется менеджер"
+
+
+@celery_app.task
 def fetch_email():
     try:
         mail_service = imaplib.IMAP4_SSL(IMAP_SERVER)
@@ -36,35 +42,67 @@ def fetch_email():
         print(f"Ошибка при проверке почты: {e}")
 
 
-def parse_email(msg_data):
-    msg = email.message_from_bytes(msg_data[0][1]) # само содержание письма
+@celery_app.task
+def send_mail(to, subject, body):
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_ACCOUNT
+    msg['To'] = to
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
 
-    subject = get_subject(msg) # получение темы письма
-    from_ = msg.get("From") # получение отправителя
-    issue_id = get_issue_from_subject(subject) # проверка на сущетсвующее обращение
+    try:
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            server.login(EMAIL_ACCOUNT, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_ACCOUNT, to, msg.as_string())
+            print(f"Автоответ отправлен {to}")
+    except Exception as e:
+        print(f"Ошибка при отправке автоответа: {e}")
+
+
+def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]) -> None:
+    # само содержание письма
+    msg = email.message_from_bytes(msg_data[0][1])
+
+    # получение темы письма
+    subject = get_subject(msg)
+    # получение отправителя
+    from_header = msg.get("From")
+    from_email = parseaddr(from_header)[1]
+    # проверка на наличие id обращения в теме
+    issue_id = get_issue_from_subject(subject)
+    print(issue_id)
     if issue_id:
         try:
-            issue = Issue.objects.get(pk=issue_id) # проверка, что данное обращение сущетсвует
+            # проверка, что данное обращение сущетсвует в БД
+            issue = Issue.objects.get(pk=issue_id)
         except ObjectDoesNotExist:
             print(f"Несуществующий id обращения: {issue_id}")
     else:
+        # создание нового обращения, если в теме письма нету id
         issue = Issue.objects.create(
             title=subject,
-            client=from_,
-        ) # создание нового обращения, если в теме письма нету id
+            client=from_email,
+        )
+        issue.title = issue.title + f"[Issue #{issue.pk}]"
+        issue.save()
+
+        send_mail.delay(issue.client, issue.title, AUTO_REPLY_TEXT)
     try:
-        body = get_body(msg) # получение содержания пиьсма
+        # получение содержания письма
+        body = get_body(msg)
     except Exception as e:
         print(f"Невозможно прочитать тело письма: {e}")
+        return
 
+    # создание сообщения и привяка к обращению
     Message.objects.create(
         subject=subject,
         body=body,
         issue=issue
-    ) # создание сообщения и привяка к обращению
+    )
 
 
-def get_subject(msg):
+def get_subject(msg) -> str:
     subject, encoding = decode_header(msg["Subject"])[0]
     try:
         subject = subject.decode(encoding if encoding else "utf-8")
@@ -72,7 +110,7 @@ def get_subject(msg):
         print(f"Невозможно прочитать тему письма: {e}")
     return subject
 
-def get_body(msg):
+def get_body(msg) -> str:
     body = ""
     if msg.is_multipart():
         for part in msg.walk():
@@ -84,6 +122,8 @@ def get_body(msg):
     else:
         body = msg.get_payload(decode=True).decode(msg.get_content_charset() or "utf-8")
     return body
-def get_issue_from_subject(subject):
-    match = re.match(r"\[Issue #(\d+)]", subject)
+
+
+def get_issue_from_subject(subject: str) -> str:
+    match = re.search(r"\[Issue #(\d+)]", subject)
     return match.group(1) if match else None

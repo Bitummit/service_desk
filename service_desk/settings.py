@@ -112,7 +112,11 @@ STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+EMAIL_BACKEND ='django.core.mail.backends.smtp.EmailBackend'
+
 IMAP_SERVER = os.getenv('IMAP_SERVER')
+SMTP_SERVER = os.getenv('SMTP_SERVER')
+SMTP_PORT = os.getenv('SMTP_PORT')
 EMAIL_ACCOUNT = os.getenv('EMAIL_ACCOUNT')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
@@ -120,8 +124,8 @@ CELERY_BROKER_URL = 'redis://localhost:6380'
 CELERY_RESULT_BACKEND = 'redis://localhost:6380'
 CELERY_TIMEZONE = 'Europe/Moscow'
 
-# to run shedule task - celery -A DashboardAPI  beat -l info
-# to run worker - celery -A DashboardAPI worker -l info
+# to run schedule task: celery -A service_desk  beat -l info
+# to run worker: celery -A service_desk worker -l info
 
 CELERY_BEAT_SCHEDULE = { # scheduler configuration
     'fetch-emails_every-minute' : {
