@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.urls import path, include
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -11,10 +12,11 @@ schema_view = get_schema_view(
       description="Service Desk to handle issues",
    ),
    public=True,
-   permission_classes=[permissions.IsAuthenticated,],
 )
 
 urlpatterns = [
+    path('admin/', admin.site.urls),
+
     path('api-auth/', include('rest_framework.urls')),
     path('api/', include('tickets.urls')),
 

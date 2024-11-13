@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+    server:
+        restart: unless-stopped
+        build:
+            dockerfile: ./Dockerfile
+        entrypoint: /app/server-entrypoint.sh
+        ports:
+            - "8000:8000"
+        depends_on:
+            - db
+        networks:
+            - app_network
+    worker:
+        restart: unless-stopped
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        entrypoint: /app/worker-entrypoint.sh
+        depends_on:
+            - server
+            - redis
+        networks:
+            - app_network
+    beat:
+        restart: unless-stopped
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        entrypoint: /app/beat-entrypoint.sh
+        depends_on:
+            - server
+            - redis
+        networks:
+            - app_network
+    redis:
+        restart: unless-stopped
+        image: redis:7.0.5-alpine
+        ports:
+            - "6380:6379"
+        networks:
+            - app_network
+    db:
+        image: postgres:13.0-alpine
+        restart: unless-stopped
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+        environment:
+            POSTGRES_DB: ${DB_NAME}
+            POSTGRES_USER: ${DB_USER}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+        ports:
+            - "5432:5432"
+        networks:
+            - app_network
+
+volumes:
+    postgres_data: {}
+
+networks:
+    app_network:
+        driver: bridge
