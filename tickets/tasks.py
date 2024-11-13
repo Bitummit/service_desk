@@ -43,7 +43,8 @@ def fetch_email():
 
 
 @celery_app.task
-def send_mail(issue, body):
+def send_mail(issue_id, body):
+    issue = Issue.objects.get(pk=issue_id)
     msg = MIMEMultipart()
     msg['From'] = EMAIL_ACCOUNT
     msg['To'] = issue.client
@@ -57,7 +58,8 @@ def send_mail(issue, body):
             Message.objects.create(
                 answer=True,
                 subject=issue.title,
-                body=body
+                body=body,
+                issue_id=issue.pk,
             )
             print(f"Автоответ отправлен {issue.client}")
     except Exception as e:
@@ -75,7 +77,7 @@ def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]) -> None:
     from_email = parseaddr(from_header)[1]
     # проверка на наличие id обращения в теме
     issue_id = get_issue_from_subject(subject)
-    print(issue_id)
+
     if issue_id:
         try:
             # проверка, что данное обращение сущетсвует в БД
@@ -90,8 +92,7 @@ def parse_email(msg_data: list[bytes | tuple[bytes, bytes]]) -> None:
         )
         issue.title = issue.title + f"[Issue #{issue.pk}]"
         issue.save()
-
-        send_mail.delay(issue, AUTO_REPLY_TEXT)
+        send_mail.delay(issue.pk, AUTO_REPLY_TEXT)
     try:
         # получение содержания письма
         body = get_body(msg)
